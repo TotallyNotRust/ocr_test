@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:intl/intl.dart';
 
 void main() {
   runApp(const MyApp());
@@ -206,10 +207,17 @@ class OcrResult {
           print("");
         }
 
-        final parsedDateTypeString =
-            text.replaceAll(RegExp(r'[\s.]', unicode: true), "-");
-
-        final asDateTime = DateFormat("dd-mm-yy").tryParse(parsedDateTypeString);
+        DateTime? asDateTime;
+        try {
+          asDateTime = DateFormat("d-M-y").parseLoose(text);
+          if (asDateTime.year < 1000) {
+            asDateTime = DateTime(
+                asDateTime.year + 2000, asDateTime.month, asDateTime.day);
+          }
+          // ignore: empty_catches
+        } on FormatException catch (e) {
+          print(e.message);
+        }
 
         if (asDateTime != null) {
           if (time != null) {
@@ -221,8 +229,8 @@ class OcrResult {
         final withoutComma = text.replaceAll(",", ".");
         final asDouble = double.tryParse(withoutComma);
 
-        print("🥰 $withoutComma $asDouble $parsedDateTypeString");
-        if (asDouble != null) {
+        print("🥰 $withoutComma $asDouble");
+        if (asDouble != null && withoutComma.contains(".")) {
           if (price != null) {
             if (price < asDouble && text.length < 18) {
               price = asDouble;
@@ -236,6 +244,7 @@ class OcrResult {
 
     return OcrResult(
       price: price,
+      time: time,
     );
   }
 }
