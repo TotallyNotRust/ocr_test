@@ -207,16 +207,30 @@ class OcrResult {
           print("");
         }
 
+        final matchedDate =
+            RegExp(r'[0-9]+.[0-9]+.[0-9]+').firstMatch(text)?.group(0);
+
         DateTime? asDateTime;
-        try {
-          asDateTime = DateFormat("d-M-y").parseLoose(text);
-          if (asDateTime.year < 1000) {
-            asDateTime = DateTime(
-                asDateTime.year + 2000, asDateTime.month, asDateTime.day);
+        if (matchedDate != null) {
+          try {
+            if (text.contains(".")) {
+              asDateTime = DateFormat("d.M.y").parseLoose(matchedDate);
+            } else if (text.contains("-")) {
+              asDateTime = DateFormat("d-M-y").parseLoose(matchedDate);
+            } else if (text.contains(" ")) {
+              asDateTime = DateFormat("d M y").parseLoose(matchedDate);
+            } else {
+              asDateTime = DateTime.parse(matchedDate);
+            }
+
+            if (asDateTime.year < 1000) {
+              asDateTime = DateTime(
+                  asDateTime.year + 2000, asDateTime.month, asDateTime.day);
+            }
+            // ignore: empty_catches
+          } on FormatException catch (e) {
+            print(e.message);
           }
-          // ignore: empty_catches
-        } on FormatException catch (e) {
-          print(e.message);
         }
 
         if (asDateTime != null) {
