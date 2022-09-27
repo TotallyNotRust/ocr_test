@@ -209,7 +209,7 @@ class OcrResult {
         final parsedDateTypeString =
             text.replaceAll(RegExp(r'[\s.]', unicode: true), "-");
 
-        final asDateTime = DateTime.tryParse(text);
+        final asDateTime = DateFormat("dd-mm-yy").tryParse(parsedDateTypeString);
 
         if (asDateTime != null) {
           if (time != null) {
@@ -221,7 +221,7 @@ class OcrResult {
         final withoutComma = text.replaceAll(",", ".");
         final asDouble = double.tryParse(withoutComma);
 
-        print("🥰 $withoutComma $asDouble");
+        print("🥰 $withoutComma $asDouble $parsedDateTypeString");
         if (asDouble != null) {
           if (price != null) {
             if (price < asDouble && text.length < 18) {
