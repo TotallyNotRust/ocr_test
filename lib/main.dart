@@ -171,9 +171,17 @@ class _YesFileState extends State<YesFile> {
                       ),
                     ),
                   ),
-                  SliverToBoxAdapter(
-                    child: Text(snapshot.data!.text),
-                  ),
+                  for (final block in snapshot.data!.blocks)
+                    for (final line in block.lines)
+                      for (final element in line.elements)
+                        SliverToBoxAdapter(
+                          child: Text(element.text),
+                        )
+
+                  // SliverToBoxAdapter(
+                  //   // child: Text(snapshot.data!.text),
+
+                  // ),
                   // for (TextBlock block in snapshot.data!.blocks)
                   //   for (TextLine line in block.lines)
                   //     SliverToBoxAdapter(
@@ -200,57 +208,67 @@ class OcrResult {
     DateTime? time;
 
     for (final block in input.blocks) {
-      for (final _text in block.lines) {
-        String text = _text.text;
+      for (final line in block.lines) {
+        for (final _text in line.elements) {
+          String text = _text.text;
 
-        if (text.contains(",")) {
-          print("");
-        }
+          if (text.contains(",")) {
+            print("");
+          }
 
-        final matchedDate =
-            RegExp(r'[0-9]+.[0-9]+.[0-9]+').firstMatch(text)?.group(0);
+          // Check for valid date
+          final dateString =
+              RegExp(r'[a-zA-Z0-9]+[ -.\/][a-zA-Z0-9]+[ -.\/][a-zA-Z0-9]+')
+                  .firstMatch(text)
+                  ?.group(0);
+          if (dateString is String) {
+            DateTime? asDateTime;
 
-        DateTime? asDateTime;
-        if (matchedDate != null) {
-          try {
-            if (text.contains(".")) {
-              asDateTime = DateFormat("d.M.y").parseLoose(matchedDate);
-            } else if (text.contains("-")) {
-              asDateTime = DateFormat("d-M-y").parseLoose(matchedDate);
-            } else if (text.contains(" ")) {
-              asDateTime = DateFormat("d M y").parseLoose(matchedDate);
+            DateTime dateIn90Days = DateTime.now().add(Duration(days: 90));
+
+            for (DateFormat format in dateFormats) {
+              try {
+                asDateTime = format.parseLoose(dateString);
+
+                if (asDateTime.year < 1000) {
+                  asDateTime = DateTime(
+                    asDateTime.year + 2000,
+                    asDateTime.month,
+                    asDateTime.day,
+                  );
+                }
+
+                if (asDateTime.isAfter(dateIn90Days)) {
+                  asDateTime = null;
+                  continue;
+                }
+                print("🚓 found date $dateString");
+                // ignore: empty_catches
+              } on FormatException catch (e) {
+                print(e.message);
+              }
+            }
+
+            if (asDateTime != null) {
+              if (time != null) {
+                print("too dates");
+              }
+              time = asDateTime;
+            }
+          }
+
+          final withoutComma = text.replaceAll(",", ".");
+          final asDouble = double.tryParse(withoutComma);
+
+          print("🥰 $withoutComma $asDouble");
+          if (asDouble != null && withoutComma.contains(".")) {
+            if (price != null) {
+              if (price < asDouble && text.length < 18) {
+                price = asDouble;
+              }
             } else {
-              asDateTime = DateTime.parse(matchedDate);
-            }
-
-            if (asDateTime.year < 1000) {
-              asDateTime = DateTime(
-                  asDateTime.year + 2000, asDateTime.month, asDateTime.day);
-            }
-            // ignore: empty_catches
-          } on FormatException catch (e) {
-            print(e.message);
-          }
-        }
-
-        if (asDateTime != null) {
-          if (time != null) {
-            print("too dates");
-          }
-          time = asDateTime;
-        }
-
-        final withoutComma = text.replaceAll(",", ".");
-        final asDouble = double.tryParse(withoutComma);
-
-        print("🥰 $withoutComma $asDouble");
-        if (asDouble != null && withoutComma.contains(".")) {
-          if (price != null) {
-            if (price < asDouble && text.length < 18) {
               price = asDouble;
             }
-          } else {
-            price = asDouble;
           }
         }
       }
@@ -261,4 +279,19 @@ class OcrResult {
       time: time,
     );
   }
+  static final List<DateFormat> dateFormats = [
+    DateFormat("d-M-y"),
+    DateFormat("d.M.y"),
+    DateFormat("d M y"),
+    DateFormat("M-d-y"),
+    DateFormat("M.d.y"),
+    DateFormat("M d y"),
+    DateFormat("y-M-d"),
+    DateFormat("y.M.d"),
+    DateFormat("y M d"),
+    DateFormat("yMd"),
+    DateFormat("dMy"),
+    DateFormat("cMy"),
+    DateFormat("mcY")
+  ];
 }
